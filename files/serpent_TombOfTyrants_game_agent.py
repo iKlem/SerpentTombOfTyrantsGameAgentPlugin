@@ -1,11 +1,9 @@
-import offshoot
+import time
 
 from serpent.game_agent import GameAgent
-from serpent.input_controller import MouseButton, KeyboardKey
+# from serpent.input_controller import MouseButton, KeyboardKey
 from serpent.sprite_locator import SpriteLocator
-# from serpent.machine_learning.context_classification.context_classifiers.cnn_inception_v3_context_classifier import CNNInceptionV3ContextClassifier
 
-plugin_path = offshoot.config["file_paths"]["plugins"]
 
 class SerpentTombOfTyrantsGameAgent(GameAgent):
 
@@ -20,16 +18,63 @@ class SerpentTombOfTyrantsGameAgent(GameAgent):
 
         self.sprite_locator = SpriteLocator()
 
-        self.need_reset = False
+        self.need_reset = True
+        self.game_paused = False
 
     def setup_play(self):
-        # TODO: get sprites for each screen to make the "screen dectection"
-
-        self.game.window_controller.resize_window(self.game.window_id, 1280, 720)
+        self.game.window_controller.resize_window(
+            self.game.window_id,
+            1280,
+            720
+        )
 
     def handle_play(self, game_frame):
-        logo_sprite = self.game.sprites["SPRITE_TOMB_OF_TYRANTS_LOGO"]
+        if self.check_on_menu(game_frame):
+            print("The game is on the menu.")
+            if self.need_reset:
+                print("RESET NEEDED!!!")
+                self.do_reset(game_frame)
+                time.sleep(2)
+                self.input_controller.click()
+            else:
+                print("Resuming game...")
+                self.start_or_resume(game_frame)
+        else:
+            print("The game is live.")
+            self.handle_play_random(game_frame)
 
-        isOnMenu = self.sprite_locator.locate(sprite=logo_sprite, game_frame=game_frame);
+    def check_on_menu(self, game_frame):
+        print(self.sprite_locator.locate(
+            sprite=self.game.sprites["SPRITE_TOMB_OF_TYRANTS_LOGO"],
+            game_frame=game_frame
+        ))
+        return self.sprite_locator.locate(
+            sprite=self.game.sprites["SPRITE_TOMB_OF_TYRANTS_LOGO"],
+            game_frame=game_frame
+        ) is not None
 
-        print(isOnMenu)
+    # This method is used for random grid/build play.
+    def handle_play_random(self, game_frame):
+        print("GRID PLAY")
+
+        print("BUILD PLAY")
+
+    def start_or_resume(self, game_frame):
+        self.input_controller.click_string(
+            query_string="RULE",
+            game_frame=game_frame,
+            ocr_preset=self.game.ocr_presets["MENU"]
+        )
+
+    def do_reset(self, game_frame):
+        self.input_controller.click_string(
+            query_string="USURP",
+            game_frame=game_frame,
+            ocr_preset=self.game.ocr_presets["MENU"]
+        )
+
+        self.input_controller.click_screen_region(
+            screen_region="RESTART_YES"
+        )
+
+        self.need_reset = False
